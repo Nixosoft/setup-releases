@@ -13,7 +13,7 @@ name: Notify Telegram on new release
 #     TELEGRAM_ADMIN_ID                your personal Telegram chat id
 #
 # Note: the appbar/substudio/react workflows in open-claw-projects create these
-# releases with a Personal Access Token (HIRADNIKOO_GITHUB_PAT). Releases made
+# releases with a Personal Access Token (NIXOSOFT_CODE_GITHUB_PAT). Releases made
 # with a PAT DO fire the `release` event here (only the default GITHUB_TOKEN
 # suppresses it), so this catches automated releases as well as manual ones.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -59,6 +59,7 @@ jobs:
             meshcompute-*)      PROJ="nixosoft_meshcompute" ;;
             android-auto-hello-*) PROJ="android_auto_hello" ;;
             travelcomms-*)      PROJ="nixosoft_travel_comms" ;;
+            webstation-desktop-*) PROJ="nixosoft_webstation" ;;
             *) PROJ="$(printf '%s' "${REL_TAG%%-*}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/_/g')" ;;
           esac
           TAGS="#openclaw #release #${PROJ}"
