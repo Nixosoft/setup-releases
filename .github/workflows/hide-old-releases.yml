@@ -1,0 +1,57 @@
+name: Hide older versions
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Source of truth: open-claw-projects/setup-releases-notifier/hide-old-releases.yml
+# (with hide-old-releases.mjs). Copied into the Nixosoft/setup-releases hub at
+#     .github/workflows/hide-old-releases.yml
+#     .github/scripts/hide-old-releases.mjs
+#
+# Hirad, 2026-11-23: older versions must not be downloadable, without deleting
+# them, for every app on the hub. After each release is published, every app's
+# older `<app>-vX.Y.Z` releases become drafts: invisible to the public and not
+# downloadable, and publishable again from the Releases page. Kept public: the
+# newest version of each app, every non-versioned release (`<app>-latest` feeds,
+# `update-bridge`), the hub's latest release, and anything a public feed or
+# manifest links to. The daily run catches releases made while this was off.
+#
+# Releases made with a PAT fire the `release` event here (GITHUB_TOKEN-made ones
+# would not), which covers every app's release workflow in open-claw-projects.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  release:
+    types: [published]
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Only print what would be hidden'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hide-old-releases
+  cancel-in-progress: false
+
+jobs:
+  hide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Hide every app's older versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          DRY_RUN: ${{ inputs.dry_run || false }}
+          JUST_PUBLISHED: ${{ github.event.release.tag_name || '' }}
+        run: node .github/scripts/hide-old-releases.mjs | tee -a "$GITHUB_STEP_SUMMARY"
