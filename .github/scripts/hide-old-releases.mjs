@@ -90,3 +90,32 @@ for (const e of hide) {
   if (!dry) await api(`/releases/${e.r.id}`, { method: 'PATCH', body: JSON.stringify({ draft: true }) });
   console.log(`${dry ? 'would hide' : 'hid'}  ${e.r.tag_name}`);
 }
+
+// A rolling release (`<app>-latest`, `update-bridge`) must hold one version only: an
+// older installer left beside the new one is still downloadable. Assets can't be made
+// drafts, so this doesn't remove anything; it names each one and fails the run, so the
+// app's release workflow gets fixed to replace its files rather than add to them.
+const BUILD = /v?\d+\.\d+\.\d+(?:-snap\.[0-9a-z.]+)?/i;
+const stale = [];
+for (const r of pub) {
+  if (VERSIONED.test(r.tag_name)) continue;
+  const byShape = new Map();
+  for (const a of r.assets) {
+    const m = BUILD.exec(a.name);
+    if (!m) continue;
+    const shape = a.name.replace(BUILD, '{version}');
+    byShape.set(shape, [...(byShape.get(shape) || []), { a, build: m[0] }]);
+  }
+  for (const [shape, list] of byShape) {
+    if (new Set(list.map((x) => x.build)).size < 2) continue;
+    list.sort((x, y) => Date.parse(y.a.updated_at) - Date.parse(x.a.updated_at));
+    for (const old of list.slice(1)) stale.push(`${r.tag_name}/${old.a.name}  (newer: ${list[0].a.name}; shape ${shape})`);
+  }
+}
+if (stale.length) {
+  console.log(`\nOLDER FILES STILL DOWNLOADABLE in rolling releases (${stale.length}). Delete them by hand and fix the release workflow that left them:`);
+  for (const s of stale) console.log(`stale ${s}`);
+  process.exitCode = 1;
+} else {
+  console.log('\nEvery rolling release holds one version only.');
+}
