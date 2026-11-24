@@ -54,4 +54,6 @@ jobs:
           REPO: ${{ github.repository }}
           DRY_RUN: ${{ inputs.dry_run || false }}
           JUST_PUBLISHED: ${{ github.event.release.tag_name || '' }}
+        # `shell: bash` runs with pipefail, so a failing script is not hidden by tee.
+        shell: bash
         run: node .github/scripts/hide-old-releases.mjs | tee -a "$GITHUB_STEP_SUMMARY"
